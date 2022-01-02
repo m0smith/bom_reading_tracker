@@ -3,5 +3,20 @@
   "@helloWorld": {
     "description": "The conventional newborn programmer greeting"
   },
-  "appTitle": "RISE 2022"
+  "appTitle": "RISE 2022",
+  "book1": "1 Nephi",
+  "book2": "2 Nephi",
+  "book3": "Jacob",
+  "book4": "Enos",
+  "book5": "Jarom",
+  "book6": "Omni",
+  "book7": "Words of Mormon",
+  "book8": "Mosiah",
+  "book9": "Alma",
+  "book10": "Helaman",
+  "book11": "3 Nephi",
+  "book12": "4 Nephi",
+  "book13": "Mormon",
+  "book14": "Ether",
+  "book15": "Moroni"
 }
