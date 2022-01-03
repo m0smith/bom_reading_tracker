@@ -79,7 +79,7 @@ class _BookState extends State<Book> {
         },
         style: ButtonStyle(
           fixedSize: getSize(),
-          overlayColor: getColor(false, Colors.grey, Colors.green),
+          overlayColor: getColor(null, Colors.grey, Colors.green),
           backgroundColor: getColor(chapter, Colors.grey, Colors.greenAccent),
           shape: getShape(),
           // padding: EdgeInsets.fromLTRB(0.0, 1.0, 0.0, 1.0)
@@ -90,9 +90,10 @@ class _BookState extends State<Book> {
         label: Text("${chapter.number}", style: TextStyle(fontSize: 12)));
   }
 
-  MaterialStateProperty<Color> getColor(Chapter chapter, Color c1, Color c2) {
+  MaterialStateProperty<Color> getColor(Chapter? chapter, Color c1, Color c2) {
     final getColor = (Set<MaterialState> states) {
-      if (chapter.read || states.contains(MaterialState.pressed)) {
+      if ((chapter != null && chapter.read) ||
+          states.contains(MaterialState.pressed)) {
         return c2;
       } else {
         return c1;
@@ -169,13 +170,13 @@ class _MyAppState extends State<MyApp> {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: "appTitle"),
+      home: const MyPages(title: "appTitle"),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
+class MyPages extends StatefulWidget {
+  const MyPages({Key? key, required this.title}) : super(key: key);
 
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
@@ -189,10 +190,35 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MyPages> createState() => _MyPagesState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyPagesState extends State<MyPages> {
+  int _selectedIndex = 0;
+  List<Widget> _widgetOptions = <Widget>[
+    Container(
+      color: Colors.green,
+      child: Center(child: ReadingProgress()),
+      constraints: BoxConstraints.expand(),
+    ),
+    Container(
+      color: Colors.green,
+      child: Center(child: Text("you just have to build them and...")),
+      constraints: BoxConstraints.expand(),
+    ),
+    Container(
+      color: Colors.green,
+      child: Center(child: Text("put them in the _widgetOption list")),
+      constraints: BoxConstraints.expand(),
+    )
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -218,12 +244,40 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: Center(
-        child: ListView(
-            //padding: const EdgeInsets.all(8),
-            children: books),
+        child: _widgetOptions.elementAt(_selectedIndex),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.check),
+            title: Text("Reading Progress"),
+          ),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.show_chart), title: Text("Personal Progress")),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.multiline_chart), title: Text("Ward Progress")),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.amber[800],
+        onTap: _onItemTapped,
       ),
 
       // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class ReadingProgress extends StatelessWidget {
+  const ReadingProgress({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ListView(
+          //padding: const EdgeInsets.all(8),
+          children: books),
     );
   }
 }
