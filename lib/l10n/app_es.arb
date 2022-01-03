@@ -15,5 +15,12 @@
   "book12": "4 Nefi",
   "book13": "Mormón",
   "book14": "Éter",
-  "book15": "Moroni"
+  "book15": "Moroni",
+
+  "personal_progress": "Progreso personal",
+  "reading_progress": "Progreso de lectura",
+  "ward_progress": "Progreso del barrio",
+
+  "chapters_read": "Capítulos leídos",
+  "total_chapters": "Capítulos totales"
 }

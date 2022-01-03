@@ -1,9 +1,12 @@
-import 'package:bom_reading_tracker/generated/l10n.dart';
+import 'dart:convert';
+import 'dart:io';
+// import 'package:bom_reading_tracker/generated/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 
-import 'accordian.dart';
+import 'accordion.dart';
 import 'personal_progress.dart';
 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
@@ -12,43 +15,108 @@ const MyApp myApp = MyApp();
 
 //var books = List<String>.generate(15, (index) => "book${index + 1}");
 const bookFontSize = 25.0;
-final totalChapters = books.map((b) => b.chapters.length).reduce((acc, el) => acc + el);
+final totalChapters =
+    books.map((b) => b.chapters.length).reduce((acc, el) => acc + el);
 
 var books = [
-  Book((c) => AppLocalizations.of(c)!.book1, 22),
-  Book((c) => AppLocalizations.of(c)!.book2, 33),
-  Book((c) => AppLocalizations.of(c)!.book3, 7),
-  Book((c) => AppLocalizations.of(c)!.book4, 1),
-  Book((c) => AppLocalizations.of(c)!.book5, 1),
-  Book((c) => AppLocalizations.of(c)!.book6, 1),
-  Book((c) => AppLocalizations.of(c)!.book7, 1),
-  Book((c) => AppLocalizations.of(c)!.book8, 29),
-  Book((c) => AppLocalizations.of(c)!.book9, 63),
-  Book((c) => AppLocalizations.of(c)!.book10, 16),
-  Book((c) => AppLocalizations.of(c)!.book11, 30),
-  Book((c) => AppLocalizations.of(c)!.book12, 1),
-  Book((c) => AppLocalizations.of(c)!.book13, 9),
-  Book((c) => AppLocalizations.of(c)!.book14, 15),
-  Book((c) => AppLocalizations.of(c)!.book15, 10),
+  Book('0', (c) => AppLocalizations.of(c)!.book1, 22),
+  Book('1', (c) => AppLocalizations.of(c)!.book2, 33),
+  Book('2', (c) => AppLocalizations.of(c)!.book3, 7),
+  Book('3', (c) => AppLocalizations.of(c)!.book4, 1),
+  Book('4', (c) => AppLocalizations.of(c)!.book5, 1),
+  Book('5', (c) => AppLocalizations.of(c)!.book6, 1),
+  Book('6', (c) => AppLocalizations.of(c)!.book7, 1),
+  Book('7', (c) => AppLocalizations.of(c)!.book8, 29),
+  Book('8', (c) => AppLocalizations.of(c)!.book9, 63),
+  Book('9', (c) => AppLocalizations.of(c)!.book10, 16),
+  Book('A', (c) => AppLocalizations.of(c)!.book11, 30),
+  Book('B', (c) => AppLocalizations.of(c)!.book12, 1),
+  Book('C', (c) => AppLocalizations.of(c)!.book13, 9),
+  Book('D', (c) => AppLocalizations.of(c)!.book14, 15),
+  Book('E', (c) => AppLocalizations.of(c)!.book15, 10),
 ];
 
 void main() {
   runApp(myApp);
 }
 
-class Chapter {
+class UserChapter {
+  String chapterId;
   bool read = false;
-  int number;
+  DateTime lastUpdate;
 
-  Chapter(this.number);
+  UserChapter(this.chapterId, this.read, this.lastUpdate);
+
+  UserChapter.fromJson(Map<String, dynamic> json)
+      : chapterId = json['chapterId'],
+        read = json['read'],
+        lastUpdate = DateTime.parse(json['lastUpdate']);
+
+  Map<String, dynamic> toJson() => {
+        'chapterId': chapterId,
+        'read': read,
+        'lastUpdate': lastUpdate.toIso8601String(),
+      };
+
+  @override
+  String toString() {
+    return 'UserChapter{chapterId: $chapterId, read: $read, lastUpdate: $lastUpdate}';
+  }
+}
+
+Future<String> get _localPath async {
+  final directory = await getApplicationDocumentsDirectory();
+  return directory.path;
+}
+
+Future<File> get _localFile async {
+  final path = await _localPath;
+  return File('$path/user_progress.json');
+}
+
+Future<File> saveToLocalStorage(obj) async {
+  //print("Saving $obj");
+  String json = jsonEncode(obj);
+  final file = await _localFile;
+
+  // Write the file
+  return file.writeAsString(json);
+
+}
+
+Future<Map<String,UserChapter>> readFromLocalStorage() async {
+  try {
+    final file = await _localFile;
+
+    // Read the file
+    final contents = await file.readAsString();
+
+    var m = jsonDecode(contents);
+    var m2 = m.map((k, v) => MapEntry<String, UserChapter>(k, UserChapter.fromJson(v)));
+    final Map<String,UserChapter> rtnval = Map<String, UserChapter>.from(m2);
+    return rtnval;
+  } catch (e) {
+    // If encountering an error, return {}
+    return {};
+  }
+}
+
+class Chapter {
+  int number;
+  Book book;
+  String id;
+
+  Chapter(this.book, this.number) : id = "${book.id}-$number";
 }
 
 class Book extends StatefulWidget {
+  final String id;
   final Function title;
   final List<Chapter> chapters = [];
 
-  Book(this.title, int chapterCount, {Key? key}) : super(key: key) {
-    chapters.addAll(List.generate(chapterCount, (index) => Chapter(index + 1)));
+  Book(this.id, this.title, int chapterCount, {Key? key}) : super(key: key) {
+    chapters.addAll(
+        List.generate(chapterCount, (index) => Chapter(this, index + 1)));
   }
 
   @override
@@ -72,11 +140,11 @@ class _BookState extends State<Book> {
   }
 
   ElevatedButton newChapterButton(chapter) {
-    Chapter chap = chapter;
     return ElevatedButton.icon(
         onPressed: () {
           setState(() {
-            chapter.read = !chapter.read;
+            MyApp.of(context)!.toggleChapterRead(chapter);
+
           });
         },
         style: ButtonStyle(
@@ -87,31 +155,29 @@ class _BookState extends State<Book> {
           // padding: EdgeInsets.fromLTRB(0.0, 1.0, 0.0, 1.0)
         ),
         icon: Icon(
-            chapter.read ? Icons.check_box : Icons.check_box_outline_blank,
+            MyApp.of(context)!.wasRead(chapter) ? Icons.check_box : Icons.check_box_outline_blank,
             size: 12.0),
-        label: Text("${chapter.number}", style: TextStyle(fontSize: 12)));
+        label: Text("${chapter.number}", style: const TextStyle(fontSize: 12)));
   }
 
   MaterialStateProperty<Color> getColor(Chapter? chapter, Color c1, Color c2) {
-    final getColor = (Set<MaterialState> states) {
-      if ((chapter != null && chapter.read) ||
-          states.contains(MaterialState.pressed)) {
+    return MaterialStateProperty.resolveWith((Set<MaterialState> states) {
+      if (MyApp.of(context)!.wasRead(chapter) || states.contains(MaterialState.pressed)) {
         return c2;
       } else {
         return c1;
       }
-    };
-    return MaterialStateProperty.resolveWith(getColor);
+    });
   }
 
   getShape() {
-    final getShape = (Set<MaterialState> states) => CircleBorder();
-    return MaterialStateProperty.resolveWith(getShape);
+    return MaterialStateProperty.resolveWith(
+        (Set<MaterialState> states) => const CircleBorder());
   }
 
   getSize() {
-    final getSize = (Set<MaterialState> states) => Size(55.0, 55.0);
-    return MaterialStateProperty.resolveWith(getSize);
+    return MaterialStateProperty.resolveWith(
+        (Set<MaterialState> states) => const Size(55.0, 55.0));
   }
 }
 
@@ -126,7 +192,20 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String localeName = 'es';
+  String localeName = Intl.defaultLocale ?? 'en';
+  final Map<String, UserChapter> _userProgress = <String, UserChapter>{};
+
+  @override
+  void initState() {
+    super.initState();
+    readFromLocalStorage().then((m) {
+      //print(m);
+      setState(() {
+        _userProgress.clear();
+        _userProgress.addAll(m);
+      });
+    });
+  }
 
   void setLocaleName(String name) {
     setState(() {
@@ -135,17 +214,45 @@ class _MyAppState extends State<MyApp> {
   }
 
   void toggleLocaleName() {
-    if (localeName == 'es') {
-      setLocaleName('en');
-    } else {
+    if (localeName == 'en') {
       setLocaleName('es');
+    } else {
+      setLocaleName('en');
     }
   }
 
+  Locale getLocale(){
+    return Locale(localeName);
+  }
+
+  bool wasRead(Chapter? chapter) {
+    if (chapter == null) return false;
+    UserChapter? uc = _userProgress[chapter.id];
+    if (uc != null) {
+      return uc.read;
+    } else {
+      return false;
+    }
+  }
+  Chapter toggleChapterRead(Chapter chapter)
+  {
+    UserChapter? uc = _userProgress[chapter.id];
+    if (uc == null) {
+    _userProgress.addAll(
+    {chapter.id: UserChapter(chapter.id, true, DateTime.now())});
+    } else {
+      uc.read = ! uc.read;
+    }
+    saveToLocalStorage(_userProgress);
+    return chapter;
+  }
+  int computeChaptersRead() {
+    return _userProgress.values.where((element) => element.read).length;
+  }
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      locale: Locale(localeName),
+      locale: getLocale(),
       onGenerateTitle: (context) {
         return AppLocalizations.of(context)!.appTitle;
       },
@@ -199,11 +306,10 @@ class _MyPagesState extends State<MyPages> {
   int _selectedIndex = 0;
   int _chaptersRead = 0;
 
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      _chaptersRead = computeChaptersRead();
+      _chaptersRead = MyApp.of(context)!.computeChaptersRead();
     });
   }
 
@@ -212,18 +318,19 @@ class _MyPagesState extends State<MyPages> {
     List<Widget> _widgetOptions = <Widget>[
       Container(
         color: Colors.green,
-        child: Center(child: ReadingProgress()),
-        constraints: BoxConstraints.expand(),
+        child: const Center(child: ReadingProgress()),
+        constraints: const BoxConstraints.expand(),
       ),
       Container(
         color: Colors.white,
-        child: Center(child: PersonalProgressChart(totalChapters, _chaptersRead)),
-        constraints: BoxConstraints.expand(),
+        child:
+            Center(child: PersonalProgressChart(totalChapters, _chaptersRead)),
+        constraints: const BoxConstraints.expand(),
       ),
       Container(
         color: Colors.green,
-        child: Center(child: Text("put them in the _widgetOption list")),
-        constraints: BoxConstraints.expand(),
+        child: const Center(child: Text("put them in the _widgetOption list")),
+        constraints: const BoxConstraints.expand(),
       )
     ];
     // This method is rerun every time setState is called, for instance as done
@@ -252,15 +359,17 @@ class _MyPagesState extends State<MyPages> {
         child: _widgetOptions.elementAt(_selectedIndex),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.check),
-            label: "Reading Progress",
+            icon: const Icon(Icons.check),
+            label: AppLocalizations.of(context)!.reading_progress,
           ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.pie_chart), label: "Personal Progress"),
+              icon: const Icon(Icons.pie_chart),
+              label: AppLocalizations.of(context)!.personal_progress),
           BottomNavigationBarItem(
-              icon: Icon(Icons.multiline_chart), label: "Ward Progress"),
+              icon: const Icon(Icons.multiline_chart),
+              label: AppLocalizations.of(context)!.ward_progress),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.green[600],
@@ -272,9 +381,7 @@ class _MyPagesState extends State<MyPages> {
   }
 }
 
-int computeChaptersRead() {
-  return books.map((book) => book.chapters.where((chapter) => chapter.read).length).reduce((value, element) => value + element);
-}
+
 
 class ReadingProgress extends StatelessWidget {
   const ReadingProgress({
