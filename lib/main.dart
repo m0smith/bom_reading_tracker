@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 
 import 'accordian.dart';
+import 'personal_progress.dart';
 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -11,6 +12,7 @@ const MyApp myApp = MyApp();
 
 //var books = List<String>.generate(15, (index) => "book${index + 1}");
 const bookFontSize = 25.0;
+final totalChapters = books.map((b) => b.chapters.length).reduce((acc, el) => acc + el);
 
 var books = [
   Book((c) => AppLocalizations.of(c)!.book1, 22),
@@ -195,32 +197,35 @@ class MyPages extends StatefulWidget {
 
 class _MyPagesState extends State<MyPages> {
   int _selectedIndex = 0;
-  List<Widget> _widgetOptions = <Widget>[
-    Container(
-      color: Colors.green,
-      child: Center(child: ReadingProgress()),
-      constraints: BoxConstraints.expand(),
-    ),
-    Container(
-      color: Colors.green,
-      child: Center(child: Text("you just have to build them and...")),
-      constraints: BoxConstraints.expand(),
-    ),
-    Container(
-      color: Colors.green,
-      child: Center(child: Text("put them in the _widgetOption list")),
-      constraints: BoxConstraints.expand(),
-    )
-  ];
+  int _chaptersRead = 0;
+
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _chaptersRead = computeChaptersRead();
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    List<Widget> _widgetOptions = <Widget>[
+      Container(
+        color: Colors.green,
+        child: Center(child: ReadingProgress()),
+        constraints: BoxConstraints.expand(),
+      ),
+      Container(
+        color: Colors.white,
+        child: Center(child: PersonalProgressChart(totalChapters, _chaptersRead)),
+        constraints: BoxConstraints.expand(),
+      ),
+      Container(
+        color: Colors.green,
+        child: Center(child: Text("put them in the _widgetOption list")),
+        constraints: BoxConstraints.expand(),
+      )
+    ];
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -250,21 +255,25 @@ class _MyPagesState extends State<MyPages> {
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.check),
-            title: Text("Reading Progress"),
+            label: "Reading Progress",
           ),
           BottomNavigationBarItem(
-              icon: Icon(Icons.show_chart), title: Text("Personal Progress")),
+              icon: Icon(Icons.pie_chart), label: "Personal Progress"),
           BottomNavigationBarItem(
-              icon: Icon(Icons.multiline_chart), title: Text("Ward Progress")),
+              icon: Icon(Icons.multiline_chart), label: "Ward Progress"),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[800],
+        selectedItemColor: Colors.green[600],
         onTap: _onItemTapped,
       ),
 
       // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+}
+
+int computeChaptersRead() {
+  return books.map((book) => book.chapters.where((chapter) => chapter.read).length).reduce((value, element) => value + element);
 }
 
 class ReadingProgress extends StatelessWidget {
