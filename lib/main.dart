@@ -1,10 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
+
 // import 'package:bom_reading_tracker/generated/l10n.dart';
+import 'package:bom_reading_tracker/authenticate.dart';
+import 'package:bom_reading_tracker/models/user.dart';
+import 'package:bom_reading_tracker/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 
 import 'accordion.dart';
 import 'personal_progress.dart';
@@ -16,7 +22,7 @@ const MyApp myApp = MyApp();
 //var books = List<String>.generate(15, (index) => "book${index + 1}");
 const bookFontSize = 25.0;
 final totalChapters =
-    books.map((b) => b.chapters.length).reduce((acc, el) => acc + el);
+books.map((b) => b.chapters.length).reduce((acc, el) => acc + el);
 
 var books = [
   Book('0', (c) => AppLocalizations.of(c)!.book1, 22),
@@ -52,7 +58,8 @@ class UserChapter {
         read = json['read'],
         lastUpdate = DateTime.parse(json['lastUpdate']);
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() =>
+      {
         'chapterId': chapterId,
         'read': read,
         'lastUpdate': lastUpdate.toIso8601String(),
@@ -61,6 +68,18 @@ class UserChapter {
   @override
   String toString() {
     return 'UserChapter{chapterId: $chapterId, read: $read, lastUpdate: $lastUpdate}';
+  }
+}
+
+class Wrapper extends StatelessWidget {
+  const Wrapper({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final user = Provider.of<AppUser?>(context);
+
+    //return const MyPages(title: "appTitle");
+    return user == null ? const Authenticate() : const MyPages(title: "appTitle");
   }
 }
 
@@ -81,10 +100,9 @@ Future<File> saveToLocalStorage(obj) async {
 
   // Write the file
   return file.writeAsString(json);
-
 }
 
-Future<Map<String,UserChapter>> readFromLocalStorage() async {
+Future<Map<String, UserChapter>> readFromLocalStorage() async {
   try {
     final file = await _localFile;
 
@@ -92,8 +110,9 @@ Future<Map<String,UserChapter>> readFromLocalStorage() async {
     final contents = await file.readAsString();
 
     var m = jsonDecode(contents);
-    var m2 = m.map((k, v) => MapEntry<String, UserChapter>(k, UserChapter.fromJson(v)));
-    final Map<String,UserChapter> rtnval = Map<String, UserChapter>.from(m2);
+    var m2 = m.map((k, v) =>
+        MapEntry<String, UserChapter>(k, UserChapter.fromJson(v)));
+    final Map<String, UserChapter> rtnval = Map<String, UserChapter>.from(m2);
     return rtnval;
   } catch (e) {
     // If encountering an error, return {}
@@ -144,7 +163,6 @@ class _BookState extends State<Book> {
         onPressed: () {
           setState(() {
             MyApp.of(context)!.toggleChapterRead(chapter);
-
           });
         },
         style: ButtonStyle(
@@ -155,14 +173,16 @@ class _BookState extends State<Book> {
           // padding: EdgeInsets.fromLTRB(0.0, 1.0, 0.0, 1.0)
         ),
         icon: Icon(
-            MyApp.of(context)!.wasRead(chapter) ? Icons.check_box : Icons.check_box_outline_blank,
+            MyApp.of(context)!.wasRead(chapter) ? Icons.check_box : Icons
+                .check_box_outline_blank,
             size: 12.0),
         label: Text("${chapter.number}", style: const TextStyle(fontSize: 12)));
   }
 
   MaterialStateProperty<Color> getColor(Chapter? chapter, Color c1, Color c2) {
     return MaterialStateProperty.resolveWith((Set<MaterialState> states) {
-      if (MyApp.of(context)!.wasRead(chapter) || states.contains(MaterialState.pressed)) {
+      if (MyApp.of(context)!.wasRead(chapter) ||
+          states.contains(MaterialState.pressed)) {
         return c2;
       } else {
         return c1;
@@ -172,12 +192,12 @@ class _BookState extends State<Book> {
 
   getShape() {
     return MaterialStateProperty.resolveWith(
-        (Set<MaterialState> states) => const CircleBorder());
+            (Set<MaterialState> states) => const CircleBorder());
   }
 
   getSize() {
     return MaterialStateProperty.resolveWith(
-        (Set<MaterialState> states) => const Size(55.0, 55.0));
+            (Set<MaterialState> states) => const Size(55.0, 55.0));
   }
 }
 
@@ -197,12 +217,16 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
+    print("initState");
     super.initState();
-    readFromLocalStorage().then((m) {
-      //print(m);
-      setState(() {
-        _userProgress.clear();
-        _userProgress.addAll(m);
+
+    Firebase.initializeApp().whenComplete(() {
+      readFromLocalStorage().then((m) {
+        print("firebase initialized");
+        setState(() {
+          _userProgress.clear();
+          _userProgress.addAll(m);
+        });
       });
     });
   }
@@ -221,7 +245,7 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Locale getLocale(){
+  Locale getLocale() {
     return Locale(localeName);
   }
 
@@ -234,52 +258,61 @@ class _MyAppState extends State<MyApp> {
       return false;
     }
   }
-  Chapter toggleChapterRead(Chapter chapter)
-  {
+
+  Chapter toggleChapterRead(Chapter chapter) {
     UserChapter? uc = _userProgress[chapter.id];
     if (uc == null) {
-    _userProgress.addAll(
-    {chapter.id: UserChapter(chapter.id, true, DateTime.now())});
+      _userProgress.addAll(
+          {chapter.id: UserChapter(chapter.id, true, DateTime.now())});
     } else {
-      uc.read = ! uc.read;
+      uc.read = !uc.read;
     }
     saveToLocalStorage(_userProgress);
     return chapter;
   }
+
   int computeChaptersRead() {
-    return _userProgress.values.where((element) => element.read).length;
+    return _userProgress.values
+        .where((element) => element.read)
+        .length;
   }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      locale: getLocale(),
-      onGenerateTitle: (context) {
-        return AppLocalizations.of(context)!.appTitle;
-      },
-      title: 'RISE 2022',
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en', ''), // English, no country code
-        Locale('es', ''), // Spanish, no country code
-      ],
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
+    print("building");
+    return StreamProvider<AppUser?>.value(
+      value: AuthService().user,
+      initialData: null,
+      child: MaterialApp(
+        locale: getLocale(),
+        onGenerateTitle: (context) {
+          return AppLocalizations.of(context)!.appTitle;
+        },
+        title: 'RISE 2022',
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en', ''), // English, no country code
+          Locale('es', ''), // Spanish, no country code
+        ],
+        theme: ThemeData(
+          // This is the theme of your application.
+          //
+          // Try running your application with "flutter run". You'll see the
+          // application has a blue toolbar. Then, without quitting the app, try
+          // changing the primarySwatch below to Colors.green and then invoke
+          // "hot reload" (press "r" in the console where you ran "flutter run",
+          // or simply save your changes to "hot reload" in a Flutter IDE).
+          // Notice that the counter didn't reset back to zero; the application
+          // is not restarted.
+          primarySwatch: Colors.blue,
+        ),
+        home: Wrapper(),
       ),
-      home: const MyPages(title: "appTitle"),
     );
   }
 }
@@ -305,6 +338,7 @@ class MyPages extends StatefulWidget {
 class _MyPagesState extends State<MyPages> {
   int _selectedIndex = 0;
   int _chaptersRead = 0;
+  final AuthService _auth = AuthService();
 
   void _onItemTapped(int index) {
     setState(() {
@@ -324,11 +358,11 @@ class _MyPagesState extends State<MyPages> {
       Container(
         color: Colors.white,
         child:
-            Center(child: PersonalProgressChart(totalChapters, _chaptersRead)),
+        Center(child: PersonalProgressChart(totalChapters, _chaptersRead)),
         constraints: const BoxConstraints.expand(),
       ),
       Container(
-        color: Colors.green,
+        color: Colors.blueAccent,
         child: const Center(child: Text("put them in the _widgetOption list")),
         constraints: const BoxConstraints.expand(),
       )
@@ -345,6 +379,7 @@ class _MyPagesState extends State<MyPages> {
         // the App.build method, and use it to set our appbar title.
         title: Text(AppLocalizations.of(context)!.appTitle),
         actions: <Widget>[
+
           IconButton(
             icon: const Icon(Icons.public),
             onPressed: () {
@@ -352,7 +387,12 @@ class _MyPagesState extends State<MyPages> {
                 MyApp.of(context)!.toggleLocaleName();
               });
             },
-          )
+          ),
+          IconButton(
+              onPressed: () async {
+                await _auth.signOut();
+              },
+              icon: const Icon(Icons.logout)),
         ],
       ),
       body: Center(
@@ -372,7 +412,7 @@ class _MyPagesState extends State<MyPages> {
               label: AppLocalizations.of(context)!.ward_progress),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.green[600],
+        selectedItemColor: Colors.blue[600],
         onTap: _onItemTapped,
       ),
 
@@ -380,7 +420,6 @@ class _MyPagesState extends State<MyPages> {
     );
   }
 }
-
 
 
 class ReadingProgress extends StatelessWidget {
@@ -392,7 +431,7 @@ class ReadingProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ListView(
-          //padding: const EdgeInsets.all(8),
+        //padding: const EdgeInsets.all(8),
           children: books),
     );
   }
