@@ -1,4 +1,5 @@
 import 'package:bom_reading_tracker/models/user.dart';
+import 'package:bom_reading_tracker/services/db.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthService {
@@ -24,10 +25,12 @@ class AuthService {
     }
   }
 
-  Future<AppUser?> register(String email, String password) async {
+  Future<AppUser?> register(String email, String password, String name, String ward, String group) async {
     try{
       UserCredential result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-      return userFromFirebaseUser(result.user);
+      User? u = result.user;
+      await DatabaseService(uid: u!.uid).updateUserData(name, ward, group);
+      return userFromFirebaseUser(u);
     } catch (ex) {
       print(ex);
       return null;

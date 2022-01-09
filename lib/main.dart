@@ -5,6 +5,8 @@ import 'dart:io';
 import 'package:bom_reading_tracker/authenticate.dart';
 import 'package:bom_reading_tracker/models/user.dart';
 import 'package:bom_reading_tracker/services/auth.dart';
+import 'package:bom_reading_tracker/services/db.dart';
+import 'package:bom_reading_tracker/shared/loading.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,6 +16,7 @@ import 'package:provider/provider.dart';
 
 import 'accordion.dart';
 import 'personal_progress.dart';
+import 'firebase_options.dart';
 
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -42,7 +45,9 @@ var books = [
   Book('E', (c) => AppLocalizations.of(c)!.book15, 10),
 ];
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(myApp);
 }
 
@@ -146,23 +151,22 @@ class Book extends StatefulWidget {
 }
 
 class _BookState extends State<Book> {
+  bool loading = false;
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<AppUser?>(context);
     //print(widget.title);
     // String s = "${widget.chapters}";
-    List<Widget> children = widget.chapters.map(newChapterButton).toList();
-    return Accordion(
-        widget.title(context),
-        Wrap(
-          children: children,
-        ));
-  }
-
-  ElevatedButton newChapterButton(chapter) {
-    return ElevatedButton.icon(
+    List<Widget> children = widget.chapters.map((chapter) => ElevatedButton.icon(
         onPressed: () {
           setState(() {
-            MyApp.of(context)!.toggleChapterRead(chapter);
+            loading = true;
+          });
+          setState(() {
+            MyApp.of(context)!.toggleChapterRead(user, chapter);
+          });
+          setState(() {
+            loading = false;
           });
         },
         style: ButtonStyle(
@@ -176,8 +180,16 @@ class _BookState extends State<Book> {
             MyApp.of(context)!.wasRead(chapter) ? Icons.check_box : Icons
                 .check_box_outline_blank,
             size: 12.0),
-        label: Text("${chapter.number}", style: const TextStyle(fontSize: 12)));
+        label: Text("${chapter.number}", style: const TextStyle(fontSize: 12)))
+    ).toList();
+    return loading ? const Loading() :  Accordion(
+        widget.title(context),
+        Wrap(
+          children: children,
+        ));
   }
+
+
 
   MaterialStateProperty<Color> getColor(Chapter? chapter, Color c1, Color c2) {
     return MaterialStateProperty.resolveWith((Set<MaterialState> states) {
@@ -220,15 +232,15 @@ class _MyAppState extends State<MyApp> {
     print("initState");
     super.initState();
 
-    Firebase.initializeApp().whenComplete(() {
+
       readFromLocalStorage().then((m) {
-        print("firebase initialized");
+
         setState(() {
           _userProgress.clear();
           _userProgress.addAll(m);
         });
       });
-    });
+
   }
 
   void setLocaleName(String name) {
@@ -259,15 +271,18 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  Chapter toggleChapterRead(Chapter chapter) {
+  Chapter toggleChapterRead(AppUser? user, Chapter chapter) {
     UserChapter? uc = _userProgress[chapter.id];
     if (uc == null) {
+     uc = UserChapter(chapter.id, true, DateTime.now());
       _userProgress.addAll(
-          {chapter.id: UserChapter(chapter.id, true, DateTime.now())});
+          {chapter.id: uc});
     } else {
       uc.read = !uc.read;
+      uc.lastUpdate = DateTime.now();
     }
     saveToLocalStorage(_userProgress);
+    DatabaseService(uid: user!.uid).updateUserProgress(uc);
     return chapter;
   }
 
@@ -279,6 +294,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+
     print("building");
     return StreamProvider<AppUser?>.value(
       value: AuthService().user,
@@ -311,7 +327,7 @@ class _MyAppState extends State<MyApp> {
           // is not restarted.
           primarySwatch: Colors.blue,
         ),
-        home: Wrapper(),
+        home: const Wrapper(),
       ),
     );
   }
