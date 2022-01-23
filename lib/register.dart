@@ -86,7 +86,8 @@ class _RegisterState extends State<Register> {
                   value: null,
                   decoration: textInputDecoration.copyWith(hintText: "Ward"),
                   validator: (val) => val == null || val.isEmpty ? "Select a ward" : null,
-                  items: ["Mount Ensign Ward", "2nd Ward", "3rd Ward", "4th Ward", "6th Ward", "9th Ward", "10th Ward", "11th Ward"].map((label) => DropdownMenuItem<String>(
+                  items: ["Mount Ensign Ward", "2nd Ward", "3rd Ward", "4th Ward", "5th Ward",
+                        "6th Ward", "9th Ward", "10th Ward", "11th Ward"].map((label) => DropdownMenuItem<String>(
                     child: Text(label),
                     value: label,
                   )).toList(),

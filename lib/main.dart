@@ -377,11 +377,11 @@ class _MyPagesState extends State<MyPages> {
         Center(child: PersonalProgressChart(totalChapters, _chaptersRead)),
         constraints: const BoxConstraints.expand(),
       ),
-      Container(
-        color: Colors.blueAccent,
-        child: const Center(child: Text("put them in the _widgetOption list")),
-        constraints: const BoxConstraints.expand(),
-      )
+      // Container(
+      //  color: Colors.blueAccent,
+      //  child: const Center(child: Text("put them in the _widgetOption list")),
+      //  constraints: const BoxConstraints.expand(),
+      // )
     ];
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
@@ -423,9 +423,9 @@ class _MyPagesState extends State<MyPages> {
           BottomNavigationBarItem(
               icon: const Icon(Icons.pie_chart),
               label: AppLocalizations.of(context)!.personal_progress),
-          BottomNavigationBarItem(
-              icon: const Icon(Icons.multiline_chart),
-              label: AppLocalizations.of(context)!.ward_progress),
+          //BottomNavigationBarItem(
+          //    icon: const Icon(Icons.multiline_chart),
+          //    label: AppLocalizations.of(context)!.ward_progress),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.blue[600],
